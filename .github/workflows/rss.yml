@@ -1,0 +1,38 @@
+name: Update RSS Feed
+
+on:
+  schedule:
+    - cron: "0 12 * * *"  # 8am Eastern
+    - cron: "0 20 * * *"  # 4pm Eastern
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run scrapers
+        run: |
+          python scrape_chotiner.py
+          python scrape_magary.py
+
+      - name: Commit and push feeds
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git pull origin main
+          git add chotiner-feed.xml magary-feed.xml
+          git diff --cached --quiet || git commit -m "Update RSS feeds"
+          git push origin main
