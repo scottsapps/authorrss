@@ -34,4 +34,4 @@ jobs:
           git config user.email "github-actions@github.com"
           git add chotiner-feed.xml magary-feed.xml
           git diff --cached --quiet || git commit -m "Update RSS feeds"
-          git push
+          git push --rebase && git push
