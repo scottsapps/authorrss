@@ -2,7 +2,8 @@ name: Update RSS Feed
 
 on:
   schedule:
-    - cron: "0 12 * * *"  # runs daily at noon UTC
+    - cron: "0 12 * * *"  # 8am Eastern
+    - cron: "0 20 * * *"  # 4pm Eastern
   workflow_dispatch:
 
 permissions:
@@ -22,16 +23,14 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4
 
-      - name: Run Chotiner scraper
-        run: python scrape_chotiner.py
-
-      - name: Run Magary scraper
-        run: python scrape_magary.py
-
       - name: Commit and push feeds
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+          git fetch origin
+          git reset --hard origin/main
+          python scrape_chotiner.py
+          python scrape_magary.py
           git add chotiner-feed.xml magary-feed.xml
           git diff --cached --quiet || git commit -m "Update RSS feeds"
-          git pull --rebase && git push
+          git push
