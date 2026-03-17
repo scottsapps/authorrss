@@ -28,9 +28,10 @@ jobs:
 
       - name: Run scrapers
         run: |
+          cat scrape_chotiner.py | head -10
           python scrape_chotiner.py
           python scrape_magary.py
-
+          
       - name: Commit and push feeds
         run: |
           git config user.name "github-actions"
