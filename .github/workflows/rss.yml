@@ -21,9 +21,14 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4
+        run: pip install requests beautifulsoup4 trafilatura python-dotenv
 
       - name: Run scrapers
+        env:
+          WALLABAG_CLIENT_ID: ${{ secrets.WALLABAG_CLIENT_ID }}
+          WALLABAG_CLIENT_SECRET: ${{ secrets.WALLABAG_CLIENT_SECRET }}
+          WALLABAG_USERNAME: ${{ secrets.WALLABAG_USERNAME }}
+          WALLABAG_PASSWORD: ${{ secrets.WALLABAG_PASSWORD }}
         run: |
           python scrape_chotiner.py
           python scrape_magary.py
