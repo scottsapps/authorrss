@@ -173,7 +173,7 @@ print(f"Feed written with {min(len(articles), 30)} articles.")
 if WALLABAG_ENABLED:
     print("Pushing articles to Wallabag...")
     for article in articles[:30]:
-        ok = save_article(article["url"], title=article["title"], content=article.get("content") or None)
+        ok = save_article(article["url"], title=article["title"])
         status = "OK" if ok else "FAILED"
         print(f"  [{status}] {article['title'][:60]}")
 else:
