@@ -1,10 +1,7 @@
 import os
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timezone
-from html import escape
 import trafilatura
-from trafilatura.metadata import extract_metadata as trafilatura_metadata
 import re
 
 try:
@@ -18,7 +15,6 @@ if WALLABAG_ENABLED:
     from wallabag import save_article
 
 URL = "https://www.newyorker.com/contributors/isaac-chotiner"
-FEED_FILE = "chotiner-feed.xml"
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -35,14 +31,14 @@ def strip_html_wrappers(html):
 
 
 def fetch_article_content(url):
-    """Fetch an article URL and return (pub_date_str, html_content) via trafilatura.
+    """Fetch an article URL and return cleaned HTML content via trafilatura.
 
-    Returns (None, None) if the page cannot be fetched or parsed.
+    Returns empty string if the page cannot be fetched or parsed.
     """
     try:
         downloaded = trafilatura.fetch_url(url)
         if not downloaded:
-            return None, None
+            return ""
 
         html_content = trafilatura.extract(
             downloaded,
@@ -53,38 +49,11 @@ def fetch_article_content(url):
             no_fallback=False,
         )
         if html_content:
-            html_content = strip_html_wrappers(html_content)
-
-        pub_date = None
-        try:
-            meta = trafilatura_metadata(downloaded)
-            if meta and meta.date:
-                pub_date = meta.date
-        except Exception:
-            pass
-
-        return pub_date, html_content
+            return strip_html_wrappers(html_content)
+        return ""
     except Exception as e:
         print(f"  Warning: could not fetch {url}: {e}")
-        return None, None
-
-
-def make_description(html_content, max_len=300):
-    """Extract a plain-text excerpt from HTML content."""
-    text = re.sub(r"<[^>]+>", " ", html_content)
-    text = re.sub(r"\s+", " ", text).strip()
-    if len(text) > max_len:
-        text = text[:max_len].rsplit(" ", 1)[0] + "…"
-    return text
-
-
-def format_rfc2822(date_str):
-    """Convert a YYYY-MM-DD date string to RFC 2822 format."""
-    try:
-        dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-        return dt.strftime("%a, %d %b %Y %H:%M:%S +0000")
-    except Exception:
-        return None
+        return ""
 
 
 # --- Scrape contributor page for article links ---
@@ -112,62 +81,11 @@ for link in soup.find_all("a", href=True):
 
 print(f"Found {len(articles)} article links. Fetching content...")
 
-# --- Fetch full content for each article ---
+# --- Fetch full content and push to Wallabag ---
 
 for i, article in enumerate(articles[:30]):
     print(f"  Fetching {i + 1}/{min(len(articles), 30)}: {article['title'][:60]}...")
-    pub_date, html_content = fetch_article_content(article["url"])
-    article["pub_date"] = pub_date
-    article["content"] = html_content or ""
-    article["description"] = make_description(article["content"]) if article["content"] else ""
-
-# --- Build RSS XML ---
-
-now_rfc = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
-
-item_blocks = []
-for article in articles[:30]:
-    pub_date_xml = ""
-    if article.get("pub_date"):
-        rfc_date = format_rfc2822(article["pub_date"])
-        if rfc_date:
-            pub_date_xml = f"\n      <pubDate>{rfc_date}</pubDate>"
-
-    desc = escape(article.get("description", ""))
-    content = article.get("content", "")
-
-    item_blocks.append(
-        f"""    <item>
-      <title>{escape(article['title'])}</title>
-      <link>{escape(article['url'])}</link>
-      <guid isPermaLink="true">{escape(article['url'])}</guid>{pub_date_xml}
-      <author>Isaac Chotiner</author>
-      <description>{desc}</description>
-      <content:encoded><![CDATA[{content}]]></content:encoded>
-    </item>"""
-    )
-
-items_xml = "\n".join(item_blocks)
-
-rss_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"
-  xmlns:content="http://purl.org/rss/1.0/modules/content/"
-  xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Isaac Chotiner — The New Yorker</title>
-    <link>{escape(URL)}</link>
-    <description>Articles by Isaac Chotiner in The New Yorker</description>
-    <lastBuildDate>{now_rfc}</lastBuildDate>
-{items_xml}
-  </channel>
-</rss>"""
-
-with open(FEED_FILE, "w", encoding="utf-8") as f:
-    f.write(rss_xml)
-
-print(f"Feed written with {min(len(articles), 30)} articles.")
-
-# --- Push to Wallabag ---
+    article["content"] = fetch_article_content(article["url"])
 
 if WALLABAG_ENABLED:
     print("Pushing articles to Wallabag...")
