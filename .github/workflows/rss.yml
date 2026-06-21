@@ -26,8 +26,6 @@ jobs:
           WALLABAG_CLIENT_SECRET: ${{ secrets.WALLABAG_CLIENT_SECRET }}
           WALLABAG_USERNAME: ${{ secrets.WALLABAG_USERNAME }}
           WALLABAG_PASSWORD: ${{ secrets.WALLABAG_PASSWORD }}
-          NYT_COOKIE: ${{ secrets.NYT_COOKIE }}
         run: |
           python scrape_chotiner.py
           python scrape_magary.py
-          python scrape_bouie.py
