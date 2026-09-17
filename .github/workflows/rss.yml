@@ -6,6 +6,9 @@ on:
     - cron: "0 20 * * *"  # 4pm Eastern
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,3 +29,15 @@ jobs:
         run: |
           python scrape_chotiner.py
           python scrape_magary.py
+
+      - name: Persist seen-article state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_chotiner.json seen_magary.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update seen-article state"
+            git push
+          else
+            echo "No state changes to commit."
+          fi

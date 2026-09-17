@@ -13,8 +13,10 @@ except ImportError:
 READECK_ENABLED = bool(os.environ.get("READECK_API_TOKEN"))
 if READECK_ENABLED:
     from readeck import save_article
+from seen import load_seen, save_seen
 
 URL = "https://www.newyorker.com/contributors/isaac-chotiner"
+SEEN_FILE = "seen_chotiner.json"
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -79,19 +81,25 @@ for link in soup.find_all("a", href=True):
             if not any(a["url"] == full_url for a in articles):
                 articles.append({"title": title, "url": full_url})
 
-print(f"Found {len(articles)} article links. Fetching content...")
+seen_urls = load_seen(SEEN_FILE)
+new_articles = [a for a in articles if a["url"] not in seen_urls]
+
+print(f"Found {len(articles)} article links ({len(new_articles)} new). Fetching content...")
 
 # --- Fetch full content and push to Readeck ---
 
-for i, article in enumerate(articles[:30]):
-    print(f"  Fetching {i + 1}/{min(len(articles), 30)}: {article['title'][:60]}...")
+for i, article in enumerate(new_articles[:30]):
+    print(f"  Fetching {i + 1}/{min(len(new_articles), 30)}: {article['title'][:60]}...")
     article["content"] = fetch_article_content(article["url"])
 
 if READECK_ENABLED:
     print("Pushing articles to Readeck...")
-    for article in articles[:30]:
+    for article in new_articles[:30]:
         ok = save_article(article["url"], title=article["title"], content=article.get("content") or None)
         status = "OK" if ok else "FAILED"
         print(f"  [{status}] {article['title'][:60]}")
+        if ok:
+            seen_urls.add(article["url"])
+    save_seen(SEEN_FILE, seen_urls)
 else:
     print("READECK_API_TOKEN not set — skipping Readeck push.")

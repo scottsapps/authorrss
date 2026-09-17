@@ -13,6 +13,9 @@ except ImportError:
 READECK_ENABLED = bool(os.environ.get("READECK_API_TOKEN"))
 if READECK_ENABLED:
     from readeck import save_article
+from seen import load_seen, save_seen
+
+SEEN_FILE = "seen_magary.json"
 
 FEEDS = [
     "https://www.sfgate.com/rss/feed/business-and-technology-news-448.php",
@@ -99,19 +102,25 @@ for feed_url in FEEDS:
     except Exception as e:
         print(f"Error fetching {feed_url}: {e}")
 
-print(f"Found {len(articles)} articles by {AUTHOR}. Fetching content...")
+seen_urls = load_seen(SEEN_FILE)
+new_articles = [a for a in articles if a["url"] not in seen_urls]
+
+print(f"Found {len(articles)} articles by {AUTHOR} ({len(new_articles)} new). Fetching content...")
 
 # --- Fetch full content and push to Readeck ---
 
-for i, article in enumerate(articles[:30]):
-    print(f"  Fetching {i + 1}/{min(len(articles), 30)}: {article['title'][:60]}...")
+for i, article in enumerate(new_articles[:30]):
+    print(f"  Fetching {i + 1}/{min(len(new_articles), 30)}: {article['title'][:60]}...")
     article["content"] = fetch_article_content(article["url"])
 
 if READECK_ENABLED:
     print("Pushing articles to Readeck...")
-    for article in articles[:30]:
+    for article in new_articles[:30]:
         ok = save_article(article["url"], title=article["title"], content=article.get("content") or None)
         status = "OK" if ok else "FAILED"
         print(f"  [{status}] {article['title'][:60]}")
+        if ok:
+            seen_urls.add(article["url"])
+    save_seen(SEEN_FILE, seen_urls)
 else:
     print("READECK_API_TOKEN not set — skipping Readeck push.")
