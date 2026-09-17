@@ -10,9 +10,9 @@ try:
 except ImportError:
     pass
 
-WALLABAG_ENABLED = bool(os.environ.get("WALLABAG_CLIENT_ID"))
-if WALLABAG_ENABLED:
-    from wallabag import save_article
+READECK_ENABLED = bool(os.environ.get("READECK_API_TOKEN"))
+if READECK_ENABLED:
+    from readeck import save_article
 
 FEEDS = [
     "https://www.sfgate.com/rss/feed/business-and-technology-news-448.php",
@@ -40,9 +40,9 @@ def strip_html_wrappers(html):
 def fetch_article_content(url):
     """Fetch an article URL and return cleaned HTML content via trafilatura.
 
-    SFGate is heavily JavaScript-dependent, so letting Wallabag fetch the bare
+    SFGate is heavily JavaScript-dependent, so letting Readeck fetch the bare
     URL yields a "required part of this site couldn't load" shell. We extract
-    the article text ourselves and hand the content to Wallabag instead.
+    the article text ourselves and hand the content to Readeck instead.
 
     Returns empty string if the page cannot be fetched or parsed.
     """
@@ -101,17 +101,17 @@ for feed_url in FEEDS:
 
 print(f"Found {len(articles)} articles by {AUTHOR}. Fetching content...")
 
-# --- Fetch full content and push to Wallabag ---
+# --- Fetch full content and push to Readeck ---
 
 for i, article in enumerate(articles[:30]):
     print(f"  Fetching {i + 1}/{min(len(articles), 30)}: {article['title'][:60]}...")
     article["content"] = fetch_article_content(article["url"])
 
-if WALLABAG_ENABLED:
-    print("Pushing articles to Wallabag...")
+if READECK_ENABLED:
+    print("Pushing articles to Readeck...")
     for article in articles[:30]:
         ok = save_article(article["url"], title=article["title"], content=article.get("content") or None)
         status = "OK" if ok else "FAILED"
         print(f"  [{status}] {article['title'][:60]}")
 else:
-    print("WALLABAG_CLIENT_ID not set — skipping Wallabag push.")
+    print("READECK_API_TOKEN not set — skipping Readeck push.")

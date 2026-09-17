@@ -1,4 +1,4 @@
-name: Push articles to Wallabag
+name: Push articles to Readeck
 
 on:
   schedule:
@@ -22,10 +22,7 @@ jobs:
 
       - name: Run scrapers
         env:
-          WALLABAG_CLIENT_ID: ${{ secrets.WALLABAG_CLIENT_ID }}
-          WALLABAG_CLIENT_SECRET: ${{ secrets.WALLABAG_CLIENT_SECRET }}
-          WALLABAG_USERNAME: ${{ secrets.WALLABAG_USERNAME }}
-          WALLABAG_PASSWORD: ${{ secrets.WALLABAG_PASSWORD }}
+          READECK_API_TOKEN: ${{ secrets.READECK_API_TOKEN }}
         run: |
           python scrape_chotiner.py
           python scrape_magary.py
